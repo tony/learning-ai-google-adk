@@ -34,7 +34,7 @@ from .prompts import (
 
 template_analyzer = Agent(
     name="template_analyzer",
-    model="gemini-2.5-flash",
+    model="gemini-2.5-flash-lite",
     instruction=TEMPLATE_ANALYZER_INSTRUCTION,
     tools=[
         analyze_target_project,
@@ -75,7 +75,7 @@ code_generator = Agent(
 
 validator = Agent(
     name="validator",
-    model="gemini-2.5-flash",
+    model="gemini-2.5-flash-lite",
     instruction=VALIDATOR_INSTRUCTION,
     tools=[
         run_ruff_format,

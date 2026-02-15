@@ -207,18 +207,13 @@ def validate_generated_content(
     if result.passed:
         return "PASS: All validation checks passed."
 
-    errors = []
-    if (
-        "error" in result.ruff_format.lower()
-        or "reformatted" in result.ruff_format.lower()
-    ):
-        errors.append(f"RUFF FORMAT:\n{result.ruff_format}")
-    if result.ruff_lint and "All checks passed" not in result.ruff_lint:
-        errors.append(f"RUFF LINT:\n{result.ruff_lint}")
-    if "error" in result.mypy.lower():
-        errors.append(f"MYPY:\n{result.mypy}")
-    if "failed" in result.pytest.lower() or "error" in result.pytest.lower():
-        errors.append(f"PYTEST:\n{result.pytest}")
+    sections = [
+        ("RUFF FORMAT", result.ruff_format),
+        ("RUFF LINT", result.ruff_lint),
+        ("MYPY", result.mypy),
+        ("PYTEST", result.pytest),
+    ]
+    errors = [f"{label}:\n{output}" for label, output in sections if output]
 
     return "FAIL:\n" + "\n---\n".join(errors) if errors else f"FAIL:\n{result!s}"
 

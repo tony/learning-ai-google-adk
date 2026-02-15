@@ -1,0 +1,320 @@
+"""ADK FunctionTool-compatible wrapper functions.
+
+Each function in this module is designed to be wrapped by ADK's FunctionTool.
+They have complete type annotations, NumPy docstrings, and return strings
+for reliable serialization back to the LLM agent.
+"""
+
+from __future__ import annotations
+
+from google.adk.tools import ToolContext  # type: ignore[attr-defined]
+
+from . import analyzers, validators
+from .models import TargetProject
+from .project_registry import get_project_path, validate_path
+
+
+def analyze_target_project(project_name: str) -> str:
+    """Analyze a target project's configuration and conventions.
+
+    Reads pyproject.toml, AGENTS.md, and scans source directories
+    to extract the project's coding standards and structure.
+
+    Parameters
+    ----------
+    project_name : str
+        One of: learning-dsa, learning-asyncio, learning-litestar,
+        learning-fastapi.
+
+    Returns
+    -------
+    str
+        Formatted analysis of project configuration.
+    """
+    project = TargetProject(project_name)
+    config = analyzers.analyze_project_config(project)
+    return (
+        f"Project: {config.name}\n"
+        f"Python: {config.python_version}\n"
+        f"Doctest modules: {config.has_doctest_modules}\n"
+        f"Mypy strict: {config.mypy_strict}\n"
+        f"Ruff target: {config.ruff_target_version}\n"
+        f"Source dirs: {', '.join(config.source_dirs)}"
+    )
+
+
+def get_existing_content(project_name: str) -> str:
+    """List existing lesson files in a target project.
+
+    Parameters
+    ----------
+    project_name : str
+        One of: learning-dsa, learning-asyncio, learning-litestar,
+        learning-fastapi.
+
+    Returns
+    -------
+    str
+        Formatted list of existing lessons with paths.
+    """
+    project = TargetProject(project_name)
+    lessons = analyzers.analyze_existing_lessons(project)
+    if not lessons:
+        return "No existing lessons found."
+    lines = [f"- {lesson['name']} ({lesson['path']})" for lesson in lessons]
+    return f"Found {len(lessons)} existing files:\n" + "\n".join(lines)
+
+
+def read_template(project_name: str) -> str:
+    """Read the lesson template and conventions for a target project.
+
+    Parameters
+    ----------
+    project_name : str
+        One of: learning-dsa, learning-asyncio, learning-litestar,
+        learning-fastapi.
+
+    Returns
+    -------
+    str
+        Template content and project conventions.
+    """
+    project = TargetProject(project_name)
+    template = analyzers.extract_template_patterns(project)
+    parts = []
+    if template.template_content:
+        parts.append(f"=== TEMPLATE ===\n{template.template_content}")
+    if template.conventions:
+        parts.append(f"=== CONVENTIONS ===\n{template.conventions}")
+    if template.example_lessons:
+        parts.append(
+            "=== EXAMPLES ===\n" + "\n".join(template.example_lessons),
+        )
+    return "\n\n".join(parts) if parts else "No template data found."
+
+
+def read_progression_plan(project_name: str) -> str:
+    """Read progression plan files for a target project.
+
+    Parameters
+    ----------
+    project_name : str
+        One of: learning-dsa, learning-asyncio, learning-litestar,
+        learning-fastapi.
+
+    Returns
+    -------
+    str
+        Combined progression plan text.
+    """
+    project = TargetProject(project_name)
+    text = analyzers.read_progression(project)
+    return text if text else "No progression plan found."
+
+
+def read_source_reference(project_name: str, relative_path: str) -> str:
+    """Read a source file from a target project for reference.
+
+    Parameters
+    ----------
+    project_name : str
+        One of: learning-dsa, learning-asyncio, learning-litestar,
+        learning-fastapi.
+    relative_path : str
+        Path relative to the project root.
+
+    Returns
+    -------
+    str
+        File contents.
+    """
+    project = TargetProject(project_name)
+    project_path = get_project_path(project)
+    file_path = project_path / relative_path
+    validate_path(file_path)
+    return analyzers.read_source_file(file_path)
+
+
+def write_generated_file(
+    project_name: str,
+    relative_path: str,
+    content: str,
+    tool_context: ToolContext,
+) -> str:
+    """Write generated content to a file in a target project.
+
+    Parameters
+    ----------
+    project_name : str
+        One of: learning-dsa, learning-asyncio, learning-litestar,
+        learning-fastapi.
+    relative_path : str
+        Path relative to the project root.
+    content : str
+        The file content to write.
+    tool_context : ToolContext
+        ADK tool context for state management.
+
+    Returns
+    -------
+    str
+        Success or error message.
+    """
+    project = TargetProject(project_name)
+    project_path = get_project_path(project)
+    file_path = project_path / relative_path
+    validated_path = validate_path(file_path)
+
+    validated_path.parent.mkdir(parents=True, exist_ok=True)
+    validated_path.write_text(content, encoding="utf-8")
+
+    # Store the written file path in session state for the validator
+    tool_context.state["last_written_file"] = str(validated_path)
+    tool_context.state["last_written_project"] = project_name
+
+    return f"Successfully wrote {len(content)} bytes to {relative_path}"
+
+
+def validate_generated_content(
+    project_name: str,
+    relative_path: str,
+) -> str:
+    """Run full validation (ruff, mypy, pytest) on a generated file.
+
+    Parameters
+    ----------
+    project_name : str
+        One of: learning-dsa, learning-asyncio, learning-litestar,
+        learning-fastapi.
+    relative_path : str
+        Path relative to the project root.
+
+    Returns
+    -------
+    str
+        PASS if all checks pass, or detailed error messages.
+    """
+    project = TargetProject(project_name)
+    project_path = get_project_path(project)
+    file_path = project_path / relative_path
+    validate_path(file_path)
+
+    result = validators.validate_file(file_path, project_dir=project_path)
+
+    if result.passed:
+        return "PASS: All validation checks passed."
+
+    errors = []
+    if (
+        "error" in result.ruff_format.lower()
+        or "reformatted" in result.ruff_format.lower()
+    ):
+        errors.append(f"RUFF FORMAT:\n{result.ruff_format}")
+    if result.ruff_lint and "All checks passed" not in result.ruff_lint:
+        errors.append(f"RUFF LINT:\n{result.ruff_lint}")
+    if "error" in result.mypy.lower():
+        errors.append(f"MYPY:\n{result.mypy}")
+    if "failed" in result.pytest.lower() or "error" in result.pytest.lower():
+        errors.append(f"PYTEST:\n{result.pytest}")
+
+    return "FAIL:\n" + "\n---\n".join(errors) if errors else f"FAIL:\n{result!s}"
+
+
+def run_ruff_format(project_name: str, relative_path: str) -> str:
+    """Run ruff format --check on a generated file.
+
+    Parameters
+    ----------
+    project_name : str
+        One of: learning-dsa, learning-asyncio, learning-litestar,
+        learning-fastapi.
+    relative_path : str
+        Path relative to the project root.
+
+    Returns
+    -------
+    str
+        PASS or error output.
+    """
+    project = TargetProject(project_name)
+    project_path = get_project_path(project)
+    file_path = project_path / relative_path
+    validate_path(file_path)
+
+    ok, output = validators.run_ruff_format(file_path, project_dir=project_path)
+    return f"PASS: {output}" if ok else f"FAIL: {output}"
+
+
+def run_ruff_check(project_name: str, relative_path: str) -> str:
+    """Run ruff check on a generated file.
+
+    Parameters
+    ----------
+    project_name : str
+        One of: learning-dsa, learning-asyncio, learning-litestar,
+        learning-fastapi.
+    relative_path : str
+        Path relative to the project root.
+
+    Returns
+    -------
+    str
+        PASS or error output.
+    """
+    project = TargetProject(project_name)
+    project_path = get_project_path(project)
+    file_path = project_path / relative_path
+    validate_path(file_path)
+
+    ok, output = validators.run_ruff_check(file_path, project_dir=project_path)
+    return f"PASS: {output}" if ok else f"FAIL: {output}"
+
+
+def run_mypy_check(project_name: str, relative_path: str) -> str:
+    """Run mypy on a generated file.
+
+    Parameters
+    ----------
+    project_name : str
+        One of: learning-dsa, learning-asyncio, learning-litestar,
+        learning-fastapi.
+    relative_path : str
+        Path relative to the project root.
+
+    Returns
+    -------
+    str
+        PASS or error output.
+    """
+    project = TargetProject(project_name)
+    project_path = get_project_path(project)
+    file_path = project_path / relative_path
+    validate_path(file_path)
+
+    ok, output = validators.run_mypy_check(file_path, project_dir=project_path)
+    return f"PASS: {output}" if ok else f"FAIL: {output}"
+
+
+def run_pytest_doctest(project_name: str, relative_path: str) -> str:
+    """Run pytest --doctest-modules on a generated file.
+
+    Parameters
+    ----------
+    project_name : str
+        One of: learning-dsa, learning-asyncio, learning-litestar,
+        learning-fastapi.
+    relative_path : str
+        Path relative to the project root.
+
+    Returns
+    -------
+    str
+        PASS or error output.
+    """
+    project = TargetProject(project_name)
+    project_path = get_project_path(project)
+    file_path = project_path / relative_path
+    validate_path(file_path)
+
+    ok, output = validators.run_pytest_doctest(file_path, project_dir=project_path)
+    return f"PASS: {output}" if ok else f"FAIL: {output}"

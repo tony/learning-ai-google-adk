@@ -15,6 +15,7 @@ else:
     import tomli as tomllib  # type: ignore[import-not-found]
 
 from .models import (
+    PROJECT_CATEGORIES,
     LessonTemplate,
     ProjectConfig,
     TargetProject,
@@ -67,6 +68,8 @@ def analyze_project_config(project: TargetProject) -> ProjectConfig:
     ruff_section = tool_section.get("ruff", {})
 
     addopts = pytest_section.get("addopts", [])
+    if isinstance(addopts, str):
+        addopts = addopts.split()
     has_doctest = any("--doctest-modules" in opt for opt in addopts)
 
     python_version = project_section.get("requires-python", ">=3.10")
@@ -108,8 +111,9 @@ def analyze_existing_lessons(
     """
     project_path = get_project_path(project)
     lessons: list[dict[str, str]] = []
+    category = PROJECT_CATEGORIES.get(project, TemplateCategory.LESSON_BASED)
 
-    for src_dir in _SOURCE_DIRS.get(TemplateCategory.LESSON_BASED, ["src"]):
+    for src_dir in _SOURCE_DIRS.get(category, ["src"]):
         source_path = project_path / src_dir
         if not source_path.is_dir():
             continue
@@ -153,7 +157,8 @@ def extract_template_patterns(project: TargetProject) -> LessonTemplate:
         template.conventions = agents_path.read_text(encoding="utf-8")
 
     # Collect example lesson paths
-    for src_dir in _SOURCE_DIRS.get(TemplateCategory.LESSON_BASED, ["src"]):
+    category = PROJECT_CATEGORIES.get(project, TemplateCategory.LESSON_BASED)
+    for src_dir in _SOURCE_DIRS.get(category, ["src"]):
         source_path = project_path / src_dir
         if source_path.is_dir():
             for py_file in sorted(source_path.rglob("*.py"))[:3]:

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import pathlib
+from unittest.mock import patch
 
 import pytest
 
@@ -51,6 +52,21 @@ class TestAnalyzeProjectConfig:
         config = analyze_project_config(TargetProject.DSA)
         assert "src" in config.source_dirs
 
+    def test_string_addopts_parsed(self, tmp_path: pathlib.Path) -> None:
+        """Verify addopts as a single string is split correctly."""
+        pyproject = tmp_path / "pyproject.toml"
+        pyproject.write_text(
+            '[project]\nname = "test"\n'
+            "[tool.pytest.ini_options]\n"
+            'addopts = "--doctest-modules -v"\n',
+            encoding="utf-8",
+        )
+        with patch(
+            "content_generator.analyzers.get_project_path", return_value=tmp_path
+        ):
+            config = analyze_project_config(TargetProject.DSA)
+        assert config.has_doctest_modules is True
+
     def test_missing_project_raises(self, tmp_path: pathlib.Path) -> None:
         """Verify FileNotFoundError when pyproject.toml is absent."""
         # This test uses monkeypatching indirectly - the registry points
@@ -92,6 +108,38 @@ class TestAnalyzeExistingLessons:
         lessons = analyze_existing_lessons(TargetProject.DSA)
         for lesson in lessons:
             assert not lesson["name"].startswith("__")
+
+
+class TestAnalyzeExistingLessonsAppBased:
+    """Tests for APP_BASED project category lookup in analyze_existing_lessons."""
+
+    def test_app_based_scans_app_dir(self, tmp_path: pathlib.Path) -> None:
+        """APP_BASED projects should scan the app/ directory."""
+        app_dir = tmp_path / "app"
+        app_dir.mkdir()
+        (app_dir / "main.py").write_text("# app", encoding="utf-8")
+        (app_dir / "__init__.py").write_text("", encoding="utf-8")
+
+        with patch(
+            "content_generator.analyzers.get_project_path", return_value=tmp_path
+        ):
+            lessons = analyze_existing_lessons(TargetProject.LITESTAR)
+
+        names = [lesson["name"] for lesson in lessons]
+        assert "main" in names
+
+    def test_app_based_excludes_dunder(self, tmp_path: pathlib.Path) -> None:
+        """APP_BASED projects should still exclude __init__.py."""
+        app_dir = tmp_path / "app"
+        app_dir.mkdir()
+        (app_dir / "__init__.py").write_text("", encoding="utf-8")
+
+        with patch(
+            "content_generator.analyzers.get_project_path", return_value=tmp_path
+        ):
+            lessons = analyze_existing_lessons(TargetProject.LITESTAR)
+
+        assert len(lessons) == 0
 
 
 class TestExtractTemplatePatterns:

@@ -156,6 +156,66 @@ The content generator uses ADK's `SequentialAgent` to orchestrate a 4-stage pipe
 State flows between agents via `output_key` → `{placeholder}` in instructions.
 `include_contents='none'` on agents 2-4 prevents conversation history bloat.
 
+## Testing Strategy
+
+This project uses pytest for testing. Tests live in `tests/` with one test module per source module.
+
+### Testing Guidelines
+
+1. **Use functional tests only**: Write tests as standalone functions (`test_*`), not classes. Avoid `class TestFoo:` groupings — use descriptive function names and file organization instead. This applies to pytest tests, not doctests.
+
+2. **Use existing fixtures over mocks**
+   - Use fixtures from `conftest.py` instead of `monkeypatch` and `MagicMock` when available
+   - Document in test docstrings why standard fixtures weren't used for exceptional cases
+
+3. **Preferred pytest patterns**
+   - Use `tmp_path` (pathlib.Path) fixture over Python's `tempfile`
+   - Use `monkeypatch` fixture over `unittest.mock`
+
+### Parametrized Tests
+
+Use `typing.NamedTuple` with a `test_id` field for parametrized test fixtures:
+
+```python
+import typing as t
+
+import pytest
+
+
+class ConfigFixture(t.NamedTuple):
+    test_id: str
+    project_name: str
+    expected_strict: bool
+
+
+CONFIG_FIXTURES = [
+    ConfigFixture(
+        test_id="dsa_strict",
+        project_name="learning-dsa",
+        expected_strict=True,
+    ),
+    ConfigFixture(
+        test_id="asyncio_strict",
+        project_name="learning-asyncio",
+        expected_strict=True,
+    ),
+]
+
+
+@pytest.mark.parametrize(
+    list(ConfigFixture._fields),
+    CONFIG_FIXTURES,
+    ids=[test.test_id for test in CONFIG_FIXTURES],
+)
+def test_project_config(
+    test_id: str,
+    project_name: str,
+    expected_strict: bool,
+) -> None:
+    config = analyze_project_config(TargetProject(project_name))
+    assert config.mypy_strict is expected_strict
+```
+
 ## Coding Standards
 
 ### Imports

@@ -7,10 +7,7 @@ for reliable serialization back to the LLM agent.
 
 from __future__ import annotations
 
-import typing as t
-
-if t.TYPE_CHECKING:
-    from google.adk.agents import Context
+from google.adk.agents import Context
 
 from . import analyzers, validators
 from .models import PROJECT_CATEGORIES, TargetProject, TemplateCategory

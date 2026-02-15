@@ -10,7 +10,7 @@ import jinja2
 
 #: Jinja2 environment for rendering templates.
 _ENV = jinja2.Environment(
-    autoescape=False,
+    autoescape=False,  # Generating Python source code, not HTML
     keep_trailing_newline=True,
     undefined=jinja2.StrictUndefined,
 )

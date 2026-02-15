@@ -6,12 +6,17 @@ targeting learning project directories.
 
 from __future__ import annotations
 
+import os
 import pathlib
 
 from .models import TargetProject
 
 #: Base directory containing all learning projects.
-_STUDY_BASE = pathlib.Path.home() / "study" / "python"
+_STUDY_BASE = pathlib.Path(
+    os.environ.get(
+        "CONTENT_GENERATOR_STUDY_BASE", str(pathlib.Path.home() / "study" / "python")
+    )
+)
 
 #: Maps each target project to its root directory.
 PROJECT_PATHS: dict[TargetProject, pathlib.Path] = {

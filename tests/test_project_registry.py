@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import importlib
 import pathlib
 
 import pytest
 
+import content_generator.project_registry as project_registry_module
 from content_generator.models import TargetProject
 from content_generator.project_registry import (
     ALLOWED_ROOTS,
@@ -80,3 +82,21 @@ class TestValidatePath:
         dotdot_path = project_path / "src" / ".." / "src" / "test.py"
         result = validate_path(dotdot_path)
         assert ".." not in str(result)
+
+
+class TestStudyBaseEnvOverride:
+    """Tests for CONTENT_GENERATOR_STUDY_BASE env var override."""
+
+    def test_env_var_overrides_study_base(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path
+    ) -> None:
+        monkeypatch.setenv("CONTENT_GENERATOR_STUDY_BASE", str(tmp_path))
+        importlib.reload(project_registry_module)
+        try:
+            reloaded_base = project_registry_module._STUDY_BASE
+            assert reloaded_base == tmp_path
+            dsa_path = project_registry_module.PROJECT_PATHS[TargetProject.DSA]
+            assert str(dsa_path).startswith(str(tmp_path))
+        finally:
+            monkeypatch.delenv("CONTENT_GENERATOR_STUDY_BASE")
+            importlib.reload(project_registry_module)

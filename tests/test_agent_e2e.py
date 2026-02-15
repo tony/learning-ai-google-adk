@@ -17,7 +17,6 @@ _skip_no_api_key = pytest.mark.skipif(
 
 
 @_skip_no_api_key
-@pytest.mark.asyncio
 async def test_content_generator_e2e_agent_responds() -> None:
     """Verify the agent pipeline can process a simple request."""
     from google.adk.runners import InMemoryRunner

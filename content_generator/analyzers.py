@@ -9,9 +9,13 @@ from __future__ import annotations
 import pathlib
 import tomllib
 
+import re
+
+from .builtin_templates import get_builtin_template
 from .models import (
     PROJECT_CATEGORIES,
     LessonTemplate,
+    PedagogyStyle,
     ProjectConfig,
     TargetProject,
     TemplateCategory,
@@ -194,6 +198,64 @@ def read_progression(project: TargetProject) -> str:
     ]
 
     return "\n\n".join(parts)
+
+
+# Regex to extract a leading numeric prefix from lesson filenames.
+_LESSON_NUMBER_RE = re.compile(r"^(\d+)")
+
+
+def next_lesson_number(project: TargetProject) -> int:
+    """Determine the next lesson number for a project.
+
+    Scans existing lessons for numeric filename prefixes and returns
+    one greater than the maximum found.  Returns ``1`` if no numbered
+    lessons exist.
+
+    Parameters
+    ----------
+    project : TargetProject
+        The project to scan.
+
+    Returns
+    -------
+    int
+        The next available lesson number.
+    """
+    lessons = analyze_existing_lessons(project)
+    max_num = 0
+    for lesson in lessons:
+        match = _LESSON_NUMBER_RE.match(lesson["name"])
+        if match:
+            max_num = max(max_num, int(match.group(1)))
+    return max_num + 1
+
+
+def read_template_with_fallback(
+    project: TargetProject,
+    pedagogy: PedagogyStyle,
+) -> str:
+    """Read a project-specific template, falling back to a builtin.
+
+    Attempts to load the project's own lesson template via
+    :func:`extract_template_patterns`.  If no project-specific template
+    is found, loads the builtin template for the given pedagogy style.
+
+    Parameters
+    ----------
+    project : TargetProject
+        The project to read templates from.
+    pedagogy : PedagogyStyle
+        Pedagogy style for builtin fallback selection.
+
+    Returns
+    -------
+    str
+        Template content.
+    """
+    template = extract_template_patterns(project)
+    if template.template_content:
+        return template.template_content
+    return get_builtin_template(pedagogy)
 
 
 def read_source_file(file_path: pathlib.Path) -> str:

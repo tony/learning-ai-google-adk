@@ -11,10 +11,12 @@ from content_generator.analyzers import (
     analyze_existing_lessons,
     analyze_project_config,
     extract_template_patterns,
+    next_lesson_number,
     read_progression,
     read_source_file,
+    read_template_with_fallback,
 )
-from content_generator.models import TargetProject
+from content_generator.models import PedagogyStyle, TargetProject
 from content_generator.project_registry import get_project_path
 
 _DSA_PATH = get_project_path(TargetProject.DSA)
@@ -184,3 +186,69 @@ def test_read_source_file_existing(tmp_path: pathlib.Path) -> None:
 def test_read_source_file_missing_raises() -> None:
     with pytest.raises(FileNotFoundError):
         read_source_file(pathlib.Path("/nonexistent/file.py"))
+
+
+def test_next_lesson_number_empty_dir(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path
+) -> None:
+    """next_lesson_number should return 1 for an empty project."""
+    src_dir = tmp_path / "src"
+    src_dir.mkdir()
+    monkeypatch.setattr(analyzers_module, "get_project_path", lambda _: tmp_path)
+    assert next_lesson_number(TargetProject.DSA) == 1
+
+
+def test_next_lesson_number_with_numbered_files(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path
+) -> None:
+    """next_lesson_number should return max+1 from existing numbered files."""
+    src_dir = tmp_path / "src"
+    src_dir.mkdir()
+    (src_dir / "001_intro.py").write_text("# intro", encoding="utf-8")
+    (src_dir / "002_arrays.py").write_text("# arrays", encoding="utf-8")
+    (src_dir / "005_trees.py").write_text("# trees", encoding="utf-8")
+    monkeypatch.setattr(analyzers_module, "get_project_path", lambda _: tmp_path)
+    assert next_lesson_number(TargetProject.DSA) == 6
+
+
+def test_next_lesson_number_non_numbered_files(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path
+) -> None:
+    """next_lesson_number should return 1 when no files have numeric prefixes."""
+    src_dir = tmp_path / "src"
+    src_dir.mkdir()
+    (src_dir / "helpers.py").write_text("# helpers", encoding="utf-8")
+    monkeypatch.setattr(analyzers_module, "get_project_path", lambda _: tmp_path)
+    assert next_lesson_number(TargetProject.DSA) == 1
+
+
+@_skip_no_dsa
+def test_next_lesson_number_dsa_real() -> None:
+    """next_lesson_number should return > 1 for DSA with existing lessons."""
+    num = next_lesson_number(TargetProject.DSA)
+    assert num > 1
+
+
+def test_read_template_with_fallback_project_template(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path
+) -> None:
+    """Should return project template when it exists."""
+    notes_dir = tmp_path / "notes"
+    notes_dir.mkdir()
+    (notes_dir / "lesson_template.py").write_text(
+        "# project template", encoding="utf-8"
+    )
+    monkeypatch.setattr(analyzers_module, "get_project_path", lambda _: tmp_path)
+    result = read_template_with_fallback(TargetProject.DSA, PedagogyStyle.CONCEPT_FIRST)
+    assert result == "# project template"
+
+
+def test_read_template_with_fallback_builtin(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path
+) -> None:
+    """Should fall back to builtin template when project has none."""
+    monkeypatch.setattr(analyzers_module, "get_project_path", lambda _: tmp_path)
+    result = read_template_with_fallback(
+        TargetProject.FASTAPI, PedagogyStyle.APPLICATION_FIRST
+    )
+    assert "create_app" in result

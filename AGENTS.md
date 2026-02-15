@@ -119,16 +119,24 @@ google_search_agent/
 
 content_generator/                # Library (no ADK dependency, fully testable)
   __init__.py
-  models.py            # Pydantic models (TargetProject, ProjectConfig, etc.)
+  models.py            # Pydantic models (TargetProject, PedagogyStyle, LessonMetadata, etc.)
   project_registry.py  # Project path mappings + path traversal safety
-  analyzers.py         # Read target project config, content, progression
+  analyzers.py         # Read target project config, content, progression, lesson numbering
   templates.py         # Jinja2 boilerplate scaffolding
   validators.py        # Subprocess runners for ruff/mypy/pytest
   tools.py             # ADK FunctionTool-compatible wrapper functions
+  utils.py             # Code fence stripping and text utilities
+  domains.py           # Domain registry (DomainConfig, get_domain, list_domains)
+  builtin_templates/   # Fallback .py.tmpl files via importlib.resources
+    __init__.py        # get_builtin_template(PedagogyStyle) loader
+    concept_lesson.py.tmpl
+    integration_lesson.py.tmpl
+    app_scaffold.py.tmpl
 
 content_generator_agent/          # ADK agent package
   __init__.py          # Re-exports root_agent
-  agent.py             # SequentialAgent with 4 sub-agents
+  agent.py             # SequentialAgent with LoopAgent validation
+  prompts.py           # Instruction string constants for agents
 
 tests/
   conftest.py
@@ -138,6 +146,10 @@ tests/
   test_templates.py
   test_validators.py
   test_tools.py
+  test_utils.py
+  test_domains.py
+  test_builtin_templates.py
+  test_prompts.py
   test_agent.py        # Structural tests (no API key needed)
   test_agent_e2e.py    # Conditional E2E (requires GOOGLE_API_KEY)
 ```
@@ -151,10 +163,27 @@ The content generator uses ADK's `SequentialAgent` to orchestrate a 4-stage pipe
 1. **template_analyzer** — Reads target project config, templates, existing content
 2. **content_planner** — Creates a detailed lesson plan from analysis
 3. **code_generator** — Produces Python source matching the template
-4. **validator** — Runs ruff/mypy/pytest with up to 3 repair cycles
+4. **validation_loop** (`LoopAgent`, max_iterations=3) — Wraps the validator in a structural retry loop
+   - **validator** — Runs ruff/mypy/pytest, fixes code, calls `exit_loop` on success
 
 State flows between agents via `output_key` → `{placeholder}` in instructions.
 `include_contents='none'` on agents 2-4 prevents conversation history bloat.
+
+The `LoopAgent` provides deterministic retry bounds: the validator calls `exit_loop`
+(which sets `actions.escalate=True`) when all checks pass, or the loop stops after
+`max_iterations`. This replaces the previous LLM-text-controlled "Maximum 3 repair cycles".
+
+### Domain Registry
+
+Domains map learning areas to generation configuration:
+
+- **dsa** — `CONCEPT_FIRST` pedagogy, `src/algorithms` lesson dir
+- **asyncio** — `CONCEPT_FIRST`, `src` lesson dir, `ellipsis` doctest strategy
+- **litestar** — `INTEGRATION_FIRST`, `skip` doctests
+- **fastapi** — `APPLICATION_FIRST`, `skip` doctests
+
+Each `DomainConfig` references a `TargetProject` enum and delegates path resolution
+to `get_project_path()`. Use `get_domain(name)` and `list_domains()` to access.
 
 ## Testing Strategy
 

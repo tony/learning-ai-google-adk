@@ -7,9 +7,8 @@ and reads progression plans from target learning projects.
 from __future__ import annotations
 
 import pathlib
-import tomllib
-
 import re
+import tomllib
 
 from .builtin_templates import get_builtin_template
 from .models import (

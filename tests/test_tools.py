@@ -147,7 +147,9 @@ def test_validate_generated_content_returns_fail(
         pytest="",
     )
     monkeypatch.setattr(
-        tools_module.validators, "validate_file", lambda *a, **kw: fail_result
+        tools_module.validators,
+        "validate_file",
+        lambda *a, **kw: fail_result,  # type: ignore[attr-defined]
     )
     result = tools.validate_generated_content("learning-dsa", "src/test.py")
     assert result.startswith("FAIL:")

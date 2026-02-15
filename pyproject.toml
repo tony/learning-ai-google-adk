@@ -37,6 +37,7 @@ packages = ["google_search_agent", "content_generator", "content_generator_agent
 [tool.mypy]
 strict = true
 python_version = "3.13"
+plugins = ["pydantic.mypy"]
 files = [
   "google_search_agent",
   "content_generator",

@@ -7,7 +7,10 @@ for reliable serialization back to the LLM agent.
 
 from __future__ import annotations
 
-from google.adk.tools import ToolContext  # type: ignore[attr-defined]
+import typing as t
+
+if t.TYPE_CHECKING:
+    from google.adk.tools import ToolContext  # type: ignore[attr-defined]
 
 from . import analyzers, validators
 from .models import TargetProject

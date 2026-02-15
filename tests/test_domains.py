@@ -7,8 +7,8 @@ from collections.abc import Iterator
 import pytest
 
 from content_generator.domains import (
-    DomainConfig,
     _REGISTRY,
+    DomainConfig,
     _register,
     get_domain,
     list_domains,

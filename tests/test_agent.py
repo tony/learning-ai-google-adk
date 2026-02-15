@@ -6,13 +6,14 @@ an API key or making any LLM calls.
 
 from __future__ import annotations
 
-from google.adk.agents import Agent, SequentialAgent
+from google.adk.agents import Agent, LoopAgent, SequentialAgent
 
 from content_generator_agent.agent import (
     code_generator,
     content_planner,
     root_agent,
     template_analyzer,
+    validation_loop,
     validator,
 )
 
@@ -31,7 +32,7 @@ def test_root_agent_sub_agent_order() -> None:
         "template_analyzer",
         "content_planner",
         "code_generator",
-        "validator",
+        "validation_loop",
     ]
 
 
@@ -122,6 +123,17 @@ def test_code_generator_temperature() -> None:
     assert config.temperature == 0.1
 
 
+def _tool_name(tool: object) -> str:
+    """Extract tool name from FunctionTool or plain function."""
+    return getattr(tool, "name", getattr(tool, "__name__", ""))
+
+
+def test_code_generator_has_strip_fences_tool() -> None:
+    """code_generator should have strip_code_fences for cleaning LLM output."""
+    tool_names = [_tool_name(t) for t in code_generator.tools]
+    assert "strip_code_fences" in tool_names
+
+
 def test_validator_is_llm_agent() -> None:
     assert isinstance(validator, Agent)
 
@@ -145,13 +157,35 @@ def test_validator_references_generated_code() -> None:
 
 
 def test_validator_has_validation_tools() -> None:
-    assert len(validator.tools) == 6
+    assert len(validator.tools) == 7
+
+
+def test_validator_has_exit_loop_tool() -> None:
+    """Validator must have exit_loop to signal successful completion."""
+    tool_names = [_tool_name(t) for t in validator.tools]
+    assert "exit_loop" in tool_names
 
 
 def test_validator_temperature() -> None:
     config = validator.generate_content_config
     assert config is not None
     assert config.temperature == 0.0
+
+
+def test_validation_loop_is_loop_agent() -> None:
+    """The validation stage should be wrapped in a LoopAgent."""
+    assert isinstance(validation_loop, LoopAgent)
+
+
+def test_validation_loop_max_iterations() -> None:
+    """LoopAgent should have a deterministic retry ceiling."""
+    assert validation_loop.max_iterations == 3
+
+
+def test_validator_inside_loop() -> None:
+    """The validator agent should be the sole sub-agent of the loop."""
+    assert len(validation_loop.sub_agents) == 1
+    assert validation_loop.sub_agents[0] is validator
 
 
 def test_state_placeholders_output_keys_match() -> None:

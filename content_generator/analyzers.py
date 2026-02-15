@@ -22,12 +22,6 @@ from .models import (
 )
 from .project_registry import get_project_path
 
-#: Maps template categories to source directory glob patterns.
-_SOURCE_PATTERNS: dict[TemplateCategory, list[str]] = {
-    TemplateCategory.LESSON_BASED: ["src/**/*.py", "src/*.py"],
-    TemplateCategory.APP_BASED: ["app/**/*.py", "src/**/*.py"],
-}
-
 #: Maps template categories to source directories to scan.
 _SOURCE_DIRS: dict[TemplateCategory, list[str]] = {
     TemplateCategory.LESSON_BASED: ["src"],

@@ -6,8 +6,6 @@ import pathlib
 import subprocess
 from unittest.mock import patch
 
-import pytest
-
 from content_generator.validators import (
     _run_tool,
     run_mypy_check,
@@ -144,10 +142,6 @@ class TestRunPytestDoctest:
 
 class TestValidateFile:
     """Tests for validate_file."""
-
-    def test_rejects_path_outside_roots(self) -> None:
-        with pytest.raises(ValueError, match="not within any allowed"):
-            validate_file(pathlib.Path("/tmp/evil.py"))
 
     def test_all_pass(self) -> None:
         from content_generator.models import TargetProject

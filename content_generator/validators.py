@@ -10,7 +10,6 @@ import pathlib
 import subprocess
 
 from .models import ValidationResult
-from .project_registry import validate_path
 
 
 def _run_tool(
@@ -171,7 +170,8 @@ def validate_file(
     Parameters
     ----------
     file_path : pathlib.Path
-        Path to the file to validate. Must be within an allowed project root.
+        Path to the file to validate. Callers must ensure the path is
+        within an allowed project root via ``validate_path`` before calling.
     project_dir : pathlib.Path | None
         Working directory for tools. Defaults to file's parent.
     run_doctest : bool
@@ -182,13 +182,7 @@ def validate_file(
     -------
     ValidationResult
         Structured result with output from each tool.
-
-    Raises
-    ------
-    ValueError
-        If file_path is not within any allowed project root.
     """
-    validate_path(file_path)
     cwd = project_dir or file_path.parent
 
     fmt_ok, fmt_out = run_ruff_format(file_path, project_dir=cwd)

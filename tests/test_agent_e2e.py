@@ -17,47 +17,44 @@ _skip_no_api_key = pytest.mark.skipif(
 
 
 @_skip_no_api_key
-class TestContentGeneratorE2E:
-    """End-to-end tests using InMemoryRunner."""
+@pytest.mark.asyncio
+async def test_content_generator_e2e_agent_responds() -> None:
+    """Verify the agent pipeline can process a simple request."""
+    from google.adk.runners import InMemoryRunner
 
-    @pytest.mark.asyncio
-    async def test_agent_responds(self) -> None:
-        """Verify the agent pipeline can process a simple request."""
-        from google.adk.runners import InMemoryRunner
+    from content_generator_agent.agent import root_agent
 
-        from content_generator_agent.agent import root_agent
+    runner = InMemoryRunner(
+        agent=root_agent,
+        app_name="test_content_generator",
+    )
 
-        runner = InMemoryRunner(
-            agent=root_agent,
-            app_name="test_content_generator",
-        )
+    session = await runner.session_service.create_session(
+        app_name="test_content_generator",
+        user_id="test_user",
+    )
 
-        session = await runner.session_service.create_session(
-            app_name="test_content_generator",
-            user_id="test_user",
-        )
+    from google.genai import types
 
-        from google.genai import types
-
-        user_content = types.Content(
-            role="user",
-            parts=[
-                types.Part(
-                    text=(
-                        "Generate a DSA lesson about binary search for"
-                        " learning-dsa project."
-                    ),
+    user_content = types.Content(
+        role="user",
+        parts=[
+            types.Part(
+                text=(
+                    "Generate a DSA lesson about binary search for"
+                    " learning-dsa project."
                 ),
-            ],
+            ),
+        ],
+    )
+
+    events = [
+        event
+        async for event in runner.run_async(
+            user_id="test_user",
+            session_id=session.id,
+            new_message=user_content,
         )
+    ]
 
-        events = [
-            event
-            async for event in runner.run_async(
-                user_id="test_user",
-                session_id=session.id,
-                new_message=user_content,
-            )
-        ]
-
-        assert len(events) > 0
+    assert len(events) > 0

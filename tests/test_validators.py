@@ -168,6 +168,31 @@ class TestValidateFile:
             result = validate_file(fake_file, project_dir=project_path)
             assert result.passed is True
 
+    def test_skip_doctest(self) -> None:
+        """Verify run_doctest=False skips pytest --doctest-modules."""
+        from content_generator.models import TargetProject
+        from content_generator.project_registry import get_project_path
+
+        project_path = get_project_path(TargetProject.DSA)
+        fake_file = project_path / "src" / "test_generated.py"
+
+        mock_result = subprocess.CompletedProcess(
+            args=[],
+            returncode=0,
+            stdout="OK\n",
+            stderr="",
+        )
+        with patch(
+            "content_generator.validators.subprocess.run", return_value=mock_result
+        ) as mock_run:
+            result = validate_file(
+                fake_file, project_dir=project_path, run_doctest=False
+            )
+            assert result.passed is True
+            assert result.pytest == ""
+            # Should have 3 calls (ruff format, ruff check, mypy) not 4
+            assert mock_run.call_count == 3
+
     def test_partial_failure(self) -> None:
         from content_generator.models import TargetProject
         from content_generator.project_registry import get_project_path

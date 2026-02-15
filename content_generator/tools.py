@@ -13,7 +13,7 @@ if t.TYPE_CHECKING:
     from google.adk.tools import ToolContext  # type: ignore[attr-defined]
 
 from . import analyzers, validators
-from .models import TargetProject
+from .models import PROJECT_CATEGORIES, TargetProject, TemplateCategory
 from .project_registry import get_project_path, validate_path
 
 
@@ -202,7 +202,12 @@ def validate_generated_content(
     file_path = project_path / relative_path
     validate_path(file_path)
 
-    result = validators.validate_file(file_path, project_dir=project_path)
+    category = PROJECT_CATEGORIES.get(project, TemplateCategory.LESSON_BASED)
+    run_doctest = category == TemplateCategory.LESSON_BASED
+
+    result = validators.validate_file(
+        file_path, project_dir=project_path, run_doctest=run_doctest
+    )
 
     if result.passed:
         return "PASS: All validation checks passed."

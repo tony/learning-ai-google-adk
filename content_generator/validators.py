@@ -161,10 +161,12 @@ def validate_file(
     file_path: pathlib.Path,
     *,
     project_dir: pathlib.Path | None = None,
+    run_doctest: bool = True,
 ) -> ValidationResult:
     """Run all validation checks on a file.
 
-    Runs ruff format, ruff check, mypy, and pytest doctest sequentially.
+    Runs ruff format, ruff check, and mypy sequentially. Optionally runs
+    pytest --doctest-modules (skipped for APP_BASED projects).
 
     Parameters
     ----------
@@ -172,6 +174,9 @@ def validate_file(
         Path to the file to validate. Must be within an allowed project root.
     project_dir : pathlib.Path | None
         Working directory for tools. Defaults to file's parent.
+    run_doctest : bool
+        Whether to run pytest --doctest-modules. Defaults to True.
+        Set to False for APP_BASED projects that use separate test files.
 
     Returns
     -------
@@ -189,7 +194,11 @@ def validate_file(
     fmt_ok, fmt_out = run_ruff_format(file_path, project_dir=cwd)
     lint_ok, lint_out = run_ruff_check(file_path, project_dir=cwd)
     mypy_ok, mypy_out = run_mypy_check(file_path, project_dir=cwd)
-    test_ok, test_out = run_pytest_doctest(file_path, project_dir=cwd)
+
+    if run_doctest:
+        test_ok, test_out = run_pytest_doctest(file_path, project_dir=cwd)
+    else:
+        test_ok, test_out = True, ""
 
     return ValidationResult(
         passed=all([fmt_ok, lint_ok, mypy_ok, test_ok]),

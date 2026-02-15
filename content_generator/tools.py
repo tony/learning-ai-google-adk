@@ -10,7 +10,7 @@ from __future__ import annotations
 import typing as t
 
 if t.TYPE_CHECKING:
-    from google.adk.tools import ToolContext  # type: ignore[attr-defined]
+    from google.adk.agents import Context
 
 from . import analyzers, validators
 from .models import PROJECT_CATEGORIES, TargetProject, TemplateCategory
@@ -142,7 +142,7 @@ def write_generated_file(
     project_name: str,
     relative_path: str,
     content: str,
-    tool_context: ToolContext,
+    tool_context: Context,
 ) -> str:
     """Write generated content to a file in a target project.
 
@@ -155,8 +155,8 @@ def write_generated_file(
         Path relative to the project root.
     content : str
         The file content to write.
-    tool_context : ToolContext
-        ADK tool context for state management.
+    tool_context : Context
+        ADK context for state management.
 
     Returns
     -------

@@ -10,8 +10,10 @@ from content_generator.models import (
     PROJECT_CATEGORIES,
     AppTemplate,
     GeneratedContent,
+    LessonMetadata,
     LessonPlan,
     LessonTemplate,
+    PedagogyStyle,
     ProjectConfig,
     TargetProject,
     TemplateCategory,
@@ -155,3 +157,45 @@ def test_enum_target_project_invalid() -> None:
 
 def test_enum_template_category_from_string() -> None:
     assert TemplateCategory("lesson_based") == TemplateCategory.LESSON_BASED
+
+
+def test_pedagogy_style_values() -> None:
+    assert PedagogyStyle.CONCEPT_FIRST.value == "concept_first"
+    assert PedagogyStyle.INTEGRATION_FIRST.value == "integration_first"
+    assert PedagogyStyle.APPLICATION_FIRST.value == "application_first"
+
+
+def test_pedagogy_style_from_string() -> None:
+    assert PedagogyStyle("concept_first") == PedagogyStyle.CONCEPT_FIRST
+
+
+def test_lesson_metadata_defaults() -> None:
+    meta = LessonMetadata(number=1, title="Intro", filename="001_intro.py")
+    assert meta.prerequisites == []
+    assert meta.narrative == ""
+
+
+def test_lesson_metadata_full() -> None:
+    meta = LessonMetadata(
+        number=3,
+        title="Hash Tables",
+        filename="003_hash_tables.py",
+        prerequisites=["001_intro.py", "002_arrays.py"],
+        narrative="Build on arrays to implement hash tables.",
+    )
+    assert meta.number == 3
+    assert len(meta.prerequisites) == 2
+    assert meta.narrative != ""
+
+
+def test_validation_result_errors_default() -> None:
+    result = ValidationResult()
+    assert result.errors == []
+
+
+def test_validation_result_errors_populated() -> None:
+    result = ValidationResult(
+        passed=False,
+        errors=["ruff format failed", "mypy error"],
+    )
+    assert len(result.errors) == 2

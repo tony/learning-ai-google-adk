@@ -42,6 +42,46 @@ PROJECT_CATEGORIES: dict[TargetProject, TemplateCategory] = {
 }
 
 
+class PedagogyStyle(enum.StrEnum):
+    """Teaching approach for content generation.
+
+    Each style maps to a different lesson structure and emphasis.
+    """
+
+    CONCEPT_FIRST = "concept_first"
+    """DSA, asyncio: heavy doctests, pure Python, algorithmic focus."""
+
+    INTEGRATION_FIRST = "integration_first"
+    """Framework integration patterns."""
+
+    APPLICATION_FIRST = "application_first"
+    """Litestar, FastAPI: functioning server/app with tests."""
+
+
+class LessonMetadata(BaseModel):
+    """Metadata for a generated lesson.
+
+    Parameters
+    ----------
+    number : int
+        Lesson sequence number.
+    title : str
+        Human-readable lesson title.
+    filename : str
+        Output filename (e.g. ``"003_hash_tables.py"``).
+    prerequisites : list[str]
+        List of prerequisite lesson names.
+    narrative : str
+        Brief narrative context for the lesson.
+    """
+
+    number: int
+    title: str
+    filename: str
+    prerequisites: list[str] = Field(default_factory=list)
+    narrative: str = ""
+
+
 class ProjectConfig(BaseModel):
     """Configuration extracted from a target project's pyproject.toml.
 
@@ -177,6 +217,7 @@ class ValidationResult(BaseModel):
     """
 
     passed: bool = False
+    errors: list[str] = Field(default_factory=list)
     ruff_format: str = ""
     ruff_lint: str = ""
     mypy: str = ""

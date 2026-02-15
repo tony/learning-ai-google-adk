@@ -7,12 +7,7 @@ and reads progression plans from target learning projects.
 from __future__ import annotations
 
 import pathlib
-import sys
-
-if sys.version_info >= (3, 11):
-    import tomllib
-else:
-    import tomli as tomllib  # type: ignore[import-not-found]
+import tomllib
 
 from .models import (
     PROJECT_CATEGORIES,

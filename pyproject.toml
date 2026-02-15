@@ -2,14 +2,13 @@
 name = "google-adk-example"
 version = "0.1.0"
 description = "Minimal Google ADK example with google_search agent."
-requires-python = ">=3.10"
+requires-python = ">=3.13"
 license = { text = "MIT" }
 dependencies = [
   "google-adk>=1.0.0",
   "python-dotenv>=1.0.0",
   "jinja2>=3.1.0",
   "pydantic>=2.0.0",
-  "tomli>=2.0.0; python_version < '3.11'",
 ]
 
 [tool.uv.sources]
@@ -37,7 +36,7 @@ packages = ["google_search_agent", "content_generator", "content_generator_agent
 
 [tool.mypy]
 strict = true
-python_version = "3.10"
+python_version = "3.13"
 files = [
   "google_search_agent",
   "content_generator",
@@ -45,7 +44,7 @@ files = [
 ]
 
 [tool.ruff]
-target-version = "py310"
+target-version = "py313"
 
 [tool.ruff.lint]
 select = [

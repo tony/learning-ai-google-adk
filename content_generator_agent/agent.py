@@ -51,7 +51,7 @@ template_analyzer = Agent(
 
 content_planner = Agent(
     name="content_planner",
-    model="gemini-2.5-flash",
+    model="gemini-2.5-flash-lite",
     instruction=CONTENT_PLANNER_INSTRUCTION,
     tools=[read_source_reference],
     output_key="lesson_plan",
@@ -63,7 +63,7 @@ content_planner = Agent(
 
 code_generator = Agent(
     name="code_generator",
-    model="gemini-2.5-flash",
+    model="gemini-2.5-flash-lite",
     instruction=CODE_GENERATOR_INSTRUCTION,
     tools=[write_generated_file, strip_code_fences],
     output_key="generated_code_summary",

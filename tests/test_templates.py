@@ -93,9 +93,7 @@ class TestRenderAsyncioLessonTemplate:
         result = render_asyncio_lesson_template(
             module_docstring="Async test.",
             body=(
-                'async def demo() -> None:'
-                '\n    """Demo."""'
-                "\n    await asyncio.sleep(0)"
+                'async def demo() -> None:\n    """Demo."""\n    await asyncio.sleep(0)'
             ),
             main_body="await demo()",
         )

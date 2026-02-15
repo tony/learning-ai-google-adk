@@ -92,7 +92,6 @@ convention = "numpy"
 
 [tool.ruff.lint.per-file-ignores]
 "*/__init__.py" = ["F401"]
-"content_generator_agent/agent.py" = ["E501"]
 "tests/**/*.py" = ["D100", "D102", "D103"]
 
 [tool.pytest.ini_options]

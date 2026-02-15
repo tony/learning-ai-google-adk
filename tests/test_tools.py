@@ -10,6 +10,7 @@ import inspect
 import typing as t
 
 import pytest
+from google.adk.tools.function_tool import FunctionTool
 
 import content_generator.tools as tools_module
 from content_generator import tools
@@ -229,3 +230,62 @@ def test_validation_mypy_check_rejects_invalid_path() -> None:
 def test_validation_pytest_doctest_rejects_invalid_path() -> None:
     with pytest.raises(ValueError, match="not within any allowed"):
         tools.run_pytest_doctest("learning-dsa", "../../etc/passwd")
+
+
+@pytest.mark.parametrize(
+    list(ToolFixture._fields),
+    TOOL_FIXTURES,
+    ids=[f.test_id for f in TOOL_FIXTURES],
+)
+def test_tool_context_param_named_correctly(
+    test_id: str, func: t.Callable[..., t.Any]
+) -> None:
+    """Any parameter annotated with Context must be named ``tool_context``."""
+    sig = inspect.signature(func)
+    for name, param in sig.parameters.items():
+        annotation = str(param.annotation)
+        if annotation.endswith("Context"):
+            assert name == "tool_context", (
+                f"{func.__name__}: Context param is named {name!r}, "
+                "must be 'tool_context' for ADK injection"
+            )
+
+
+@pytest.mark.parametrize(
+    list(ToolFixture._fields),
+    TOOL_FIXTURES,
+    ids=[f.test_id for f in TOOL_FIXTURES],
+)
+def test_tool_wraps_as_function_tool(
+    test_id: str, func: t.Callable[..., t.Any]
+) -> None:
+    """Each tool must wrap with FunctionTool without raising."""
+    tool = FunctionTool(func)
+    assert tool.name == func.__name__
+
+
+@pytest.mark.parametrize(
+    list(ToolFixture._fields),
+    TOOL_FIXTURES,
+    ids=[f.test_id for f in TOOL_FIXTURES],
+)
+def test_tool_declaration_excludes_tool_context(
+    test_id: str, func: t.Callable[..., t.Any]
+) -> None:
+    """FunctionDeclaration must not expose tool_context to the LLM."""
+    tool = FunctionTool(func)
+    decl = tool._get_declaration()
+    props = decl.parameters.properties if decl.parameters else {}
+    assert "tool_context" not in props
+    # Guard against vacuous pass on empty declaration
+    sig = inspect.signature(func)
+    non_context_params = [
+        n
+        for n in sig.parameters
+        if not str(sig.parameters[n].annotation).endswith("Context")
+    ]
+    if non_context_params:
+        assert len(props) > 0, (
+            f"{func.__name__}: declaration has no parameters but function has "
+            f"{non_context_params}"
+        )

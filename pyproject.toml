@@ -1,7 +1,7 @@
 [project]
 name = "google-adk-example"
 version = "0.1.0"
-description = "Minimal Google ADK example with google_search agent."
+description = "Google ADK agents: google_search and a SequentialAgent content-generation pipeline."
 requires-python = ">=3.13"
 license = { text = "MIT" }
 dependencies = [

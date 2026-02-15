@@ -8,11 +8,12 @@ from __future__ import annotations
 
 import inspect
 import typing as t
+from unittest.mock import MagicMock, patch
 
 import pytest
 
 from content_generator import tools
-from content_generator.models import TargetProject
+from content_generator.models import TargetProject, ValidationResult
 from content_generator.project_registry import get_project_path
 
 #: All tool functions that will be wrapped by FunctionTool.
@@ -123,6 +124,92 @@ class TestValidateGeneratedContent:
     def test_rejects_invalid_path(self) -> None:
         with pytest.raises(ValueError, match="not within any allowed"):
             tools.validate_generated_content("learning-dsa", "../../etc/passwd")
+
+    def test_returns_fail_on_validation_errors(self) -> None:
+        """Verify FAIL output includes all non-empty tool outputs."""
+        fail_result = ValidationResult(
+            passed=False,
+            ruff_format="1 file would be reformatted",
+            ruff_lint="",
+            mypy="error: Name 'x' is not defined",
+            pytest="",
+        )
+        with patch(
+            "content_generator.tools.validators.validate_file",
+            return_value=fail_result,
+        ):
+            result = tools.validate_generated_content("learning-dsa", "src/test.py")
+        assert result.startswith("FAIL:")
+        assert "RUFF FORMAT" in result
+        assert "MYPY" in result
+        # Empty sections should not appear
+        assert "RUFF LINT" not in result
+        assert "PYTEST" not in result
+
+
+class TestWriteGeneratedFile:
+    """Tests for write_generated_file."""
+
+    def test_writes_file_and_updates_state(self, tmp_path: t.Any) -> None:
+        """Verify file write, directory creation, and state update."""
+        mock_context = MagicMock()
+        mock_context.state = {}
+
+        project_path = tmp_path / "learning-dsa"
+        project_path.mkdir()
+
+        with (
+            patch(
+                "content_generator.tools.get_project_path",
+                return_value=project_path,
+            ),
+            patch(
+                "content_generator.tools.validate_path",
+                side_effect=lambda p: p.resolve(),
+            ),
+        ):
+            result = tools.write_generated_file(
+                "learning-dsa",
+                "src/lesson_01.py",
+                "# hello world\n",
+                mock_context,
+            )
+
+        assert "Successfully wrote" in result
+        assert "14 bytes" in result
+        written_file = project_path / "src" / "lesson_01.py"
+        assert written_file.exists()
+        assert written_file.read_text(encoding="utf-8") == "# hello world\n"
+        assert "last_written_file" in mock_context.state
+        assert "last_written_project" in mock_context.state
+        assert mock_context.state["last_written_project"] == "learning-dsa"
+
+    def test_creates_parent_directories(self, tmp_path: t.Any) -> None:
+        """Verify nested directory creation."""
+        mock_context = MagicMock()
+        mock_context.state = {}
+
+        project_path = tmp_path / "learning-dsa"
+        project_path.mkdir()
+
+        with (
+            patch(
+                "content_generator.tools.get_project_path",
+                return_value=project_path,
+            ),
+            patch(
+                "content_generator.tools.validate_path",
+                side_effect=lambda p: p.resolve(),
+            ),
+        ):
+            tools.write_generated_file(
+                "learning-dsa",
+                "src/deep/nested/file.py",
+                "content",
+                mock_context,
+            )
+
+        assert (project_path / "src" / "deep" / "nested" / "file.py").exists()
 
 
 class TestValidationTools:

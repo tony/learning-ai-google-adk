@@ -12,7 +12,7 @@ import pathlib
 from pydantic import BaseModel, Field
 
 
-class TargetProject(str, enum.Enum):
+class TargetProject(enum.StrEnum):
     """Supported target learning projects."""
 
     DSA = "learning-dsa"
@@ -21,7 +21,7 @@ class TargetProject(str, enum.Enum):
     FASTAPI = "learning-fastapi"
 
 
-class TemplateCategory(str, enum.Enum):
+class TemplateCategory(enum.StrEnum):
     """Template categories that determine generation strategy.
 
     LESSON_BASED projects use numbered Python files with doctests as

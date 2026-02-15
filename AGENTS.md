@@ -100,6 +100,20 @@ Run mypy for type checking:
 uv run mypy google_search_agent content_generator content_generator_agent
 ```
 
+### Task Runner (just)
+
+The project uses [just](https://just.systems/) as a task runner. Run `just` to list all recipes.
+
+```bash
+just start          # Launch ADK dev server (uv run adk web .)
+just test           # Run pytest (accepts extra args: just test -x -k search)
+just check          # Full workflow: format → test → lint → type-check
+just ruff-format    # Format code
+just ruff-fix       # Lint with auto-fix
+just mypy           # Type check
+just watch-test     # Re-run tests on file change (requires entr)
+```
+
 ### Development Workflow
 
 Follow this workflow for code changes:
@@ -324,3 +338,69 @@ When stuck in debugging loops:
 2. **Minimize to MVP**: Remove all debugging cruft and experimental code
 3. **Document the issue** comprehensively for a fresh approach
 4. **Format for portability** (using quadruple backticks)
+
+### Debugging with the Dev Server API
+
+When the dev server is running (`just start`), agents can query it via REST at `http://localhost:8000`.
+
+**Important**: The API uses **camelCase** field names (e.g., `appName`, `sessionId`, `userId`), but also accepts snake_case.
+
+#### List available agents
+
+```bash
+curl -s http://localhost:8000/list-apps | jq .
+```
+
+#### List sessions for an agent
+
+```bash
+curl -s http://localhost:8000/apps/content_generator_agent/users/user/sessions | jq '.[].id'
+```
+
+#### Create a new session
+
+```bash
+curl -s -X POST http://localhost:8000/apps/content_generator_agent/users/user/sessions \
+  -H 'Content-Type: application/json' \
+  -d '{}' | jq .id
+```
+
+#### Send a message (non-streaming)
+
+```bash
+curl -s -X POST http://localhost:8000/run \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "app_name": "content_generator_agent",
+    "user_id": "user",
+    "session_id": "SESSION_ID",
+    "new_message": {"parts": [{"text": "Generate a DSA lesson about binary search"}]}
+  }' | jq '.[-1].content.parts[0].text'
+```
+
+#### Send a message (SSE streaming)
+
+```bash
+curl -s -N -X POST http://localhost:8000/run_sse \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "app_name": "content_generator_agent",
+    "user_id": "user",
+    "session_id": "SESSION_ID",
+    "new_message": {"parts": [{"text": "Generate a DSA lesson about binary search"}]},
+    "streaming": true
+  }'
+```
+
+#### Inspect session history
+
+```bash
+curl -s http://localhost:8000/apps/content_generator_agent/users/user/sessions/SESSION_ID \
+  | jq '.events[] | {author, id, parts: .content.parts[0].text[:120]}'
+```
+
+#### Check server health
+
+```bash
+curl -s http://localhost:8000/health | jq .
+```

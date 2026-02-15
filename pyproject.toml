@@ -7,6 +7,9 @@ license = { text = "MIT" }
 dependencies = [
   "google-adk>=1.0.0",
   "python-dotenv>=1.0.0",
+  "jinja2>=3.1.0",
+  "pydantic>=2.0.0",
+  "tomli>=2.0.0; python_version < '3.11'",
 ]
 
 [tool.uv.sources]
@@ -30,13 +33,15 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["google_search_agent", "content_generator_agent"]
+packages = ["google_search_agent", "content_generator", "content_generator_agent"]
 
 [tool.mypy]
 strict = true
 python_version = "3.10"
 files = [
   "google_search_agent",
+  "content_generator",
+  "content_generator_agent",
 ]
 
 [tool.ruff]
@@ -74,6 +79,8 @@ pyupgrade.keep-runtime-typing = false
 [tool.ruff.lint.isort]
 known-first-party = [
   "google_search_agent",
+  "content_generator",
+  "content_generator_agent",
 ]
 combine-as-imports = true
 required-imports = [
@@ -86,8 +93,10 @@ convention = "numpy"
 [tool.ruff.lint.per-file-ignores]
 "*/__init__.py" = ["F401"]
 "content_generator_agent/agent.py" = ["E501"]
+"tests/**/*.py" = ["D100", "D102", "D103"]
 
 [tool.pytest.ini_options]
+testpaths = ["tests"]
 addopts = [
   "--tb=short",
   "--no-header",

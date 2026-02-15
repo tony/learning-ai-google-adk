@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from google.adk.agents import Context
 
-from . import analyzers, validators
+from . import analyzers, domains, validators
 from .models import PROJECT_CATEGORIES, TargetProject, TemplateCategory
 from .project_registry import get_project_path, validate_path
 
@@ -218,6 +218,66 @@ def validate_generated_content(
     errors = [f"{label}:\n{output}" for label, output in sections if output]
 
     return "FAIL:\n" + "\n---\n".join(errors) if errors else f"FAIL:\n{result!s}"
+
+
+def list_available_domains() -> str:
+    """List all registered content generation domains.
+
+    Returns
+    -------
+    str
+        Comma-separated list of available domain names.
+    """
+    names = domains.list_domains()
+    if not names:
+        return "No domains registered."
+    return f"Available domains: {', '.join(names)}"
+
+
+def get_domain_config(domain_name: str) -> str:
+    """Get the configuration for a content generation domain.
+
+    Parameters
+    ----------
+    domain_name : str
+        Domain identifier (e.g. ``"dsa"``, ``"asyncio"``).
+
+    Returns
+    -------
+    str
+        Formatted domain configuration summary.
+    """
+    config = domains.get_domain(domain_name)
+    return (
+        f"Domain: {config.name}\n"
+        f"Project: {config.project.value}\n"
+        f"Pedagogy: {config.pedagogy.value}\n"
+        f"Lesson dir: {config.lesson_dir}\n"
+        f"Strict mypy: {config.strict_mypy}\n"
+        f"Doctest strategy: {config.doctest_strategy}"
+    )
+
+
+def get_next_lesson_number(project_name: str) -> str:
+    """Determine the next lesson number for a target project.
+
+    Scans existing lessons for numeric filename prefixes and returns
+    one greater than the maximum found.
+
+    Parameters
+    ----------
+    project_name : str
+        One of: learning-dsa, learning-asyncio, learning-litestar,
+        learning-fastapi.
+
+    Returns
+    -------
+    str
+        The next available lesson number.
+    """
+    project = TargetProject(project_name)
+    number = analyzers.next_lesson_number(project)
+    return f"Next lesson number: {number}"
 
 
 def run_ruff_format(project_name: str, relative_path: str) -> str:

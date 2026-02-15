@@ -40,6 +40,9 @@ TOOL_FIXTURES = [
     ToolFixture(test_id="run_ruff_check", func=tools.run_ruff_check),
     ToolFixture(test_id="run_mypy_check", func=tools.run_mypy_check),
     ToolFixture(test_id="run_pytest_doctest", func=tools.run_pytest_doctest),
+    ToolFixture(test_id="list_available_domains", func=tools.list_available_domains),
+    ToolFixture(test_id="get_domain_config", func=tools.get_domain_config),
+    ToolFixture(test_id="get_next_lesson_number", func=tools.get_next_lesson_number),
 ]
 
 _DSA_PATH = get_project_path(TargetProject.DSA)
@@ -289,3 +292,26 @@ def test_tool_declaration_excludes_tool_context(
             f"{func.__name__}: declaration has no parameters but function has "
             f"{non_context_params}"
         )
+
+
+def test_list_available_domains_returns_names() -> None:
+    result = tools.list_available_domains()
+    assert "dsa" in result
+    assert "asyncio" in result
+
+
+def test_get_domain_config_returns_info() -> None:
+    result = tools.get_domain_config("dsa")
+    assert "Domain: dsa" in result
+    assert "Pedagogy: concept_first" in result
+
+
+def test_get_domain_config_invalid_raises() -> None:
+    with pytest.raises(KeyError, match="Unknown domain"):
+        tools.get_domain_config("nonexistent")
+
+
+@_skip_no_dsa
+def test_get_next_lesson_number_dsa() -> None:
+    result = tools.get_next_lesson_number("learning-dsa")
+    assert "Next lesson number:" in result

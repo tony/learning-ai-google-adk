@@ -74,6 +74,9 @@ target/
 # Environment
 .env
 
+# ADK runtime artifacts
+.adk/
+
 # Claude code
 **/CLAUDE.local.md
 **/CLAUDE.*.md

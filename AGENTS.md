@@ -12,10 +12,15 @@ This file provides guidance to AI agents (including Claude Code, Cursor, and oth
 
 ## Project Overview
 
-google-adk-example is a minimal example project for [Google's Agent Development Kit (ADK)](https://github.com/google/adk-python). It demonstrates a single agent (`google_search_agent`) that uses the `google_search` tool to answer questions with cited sources.
+google-adk-example is a project for [Google's Agent Development Kit (ADK)](https://github.com/google/adk-python). It includes two agents:
+
+1. **`google_search_agent`** — Minimal agent using `google_search` tool
+2. **`content_generator_agent`** — SequentialAgent pipeline that generates validated Python learning content for DSA, asyncio, Litestar, and FastAPI projects
 
 Key features:
-- Minimal ADK agent with Google Search grounding
+- ADK agents with Google Search grounding and content generation
+- SequentialAgent pipeline with 4-stage orchestration
+- Reusable `content_generator` library (no ADK dependency)
 - Local editable ADK source via `[tool.uv.sources]`
 - Follows conventions from the libtmux family of projects
 
@@ -48,6 +53,14 @@ cp .env.example .env
 ```bash
 uv run adk web google_search_agent
 ```
+
+### Running the Content Generator Agent
+
+```bash
+uv run adk web content_generator_agent
+```
+
+Example prompt: "Generate a DSA lesson about binary search for learning-dsa project."
 
 ### Running Tests
 
@@ -84,7 +97,7 @@ uv run ruff check . --fix --show-fixes
 Run mypy for type checking:
 
 ```bash
-uv run mypy google_search_agent
+uv run mypy google_search_agent content_generator content_generator_agent
 ```
 
 ### Development Workflow
@@ -94,18 +107,54 @@ Follow this workflow for code changes:
 1. **Format First**: `uv run ruff format .`
 2. **Run Tests**: `uv run pytest`
 3. **Run Linting**: `uv run ruff check . --fix --show-fixes`
-4. **Check Types**: `uv run mypy google_search_agent`
+4. **Check Types**: `uv run mypy .`
 5. **Verify Tests Again**: `uv run pytest`
 
 ## Code Architecture
 
 ```
 google_search_agent/
-  __init__.py      # Re-exports root_agent
-  agent.py         # Agent definition (root_agent)
+  __init__.py          # Re-exports root_agent
+  agent.py             # Agent definition (root_agent)
+
+content_generator/                # Library (no ADK dependency, fully testable)
+  __init__.py
+  models.py            # Pydantic models (TargetProject, ProjectConfig, etc.)
+  project_registry.py  # Project path mappings + path traversal safety
+  analyzers.py         # Read target project config, content, progression
+  templates.py         # Jinja2 boilerplate scaffolding
+  validators.py        # Subprocess runners for ruff/mypy/pytest
+  tools.py             # ADK FunctionTool-compatible wrapper functions
+
+content_generator_agent/          # ADK agent package
+  __init__.py          # Re-exports root_agent
+  agent.py             # SequentialAgent with 4 sub-agents
+
+tests/
+  conftest.py
+  test_models.py
+  test_project_registry.py
+  test_analyzers.py
+  test_templates.py
+  test_validators.py
+  test_tools.py
+  test_agent.py        # Structural tests (no API key needed)
+  test_agent_e2e.py    # Conditional E2E (requires GOOGLE_API_KEY)
 ```
 
-ADK discovers the agent by importing `google_search_agent` and finding `root_agent`.
+ADK discovers agents by importing the package and finding `root_agent`.
+
+### Content Generator Pipeline
+
+The content generator uses ADK's `SequentialAgent` to orchestrate a 4-stage pipeline:
+
+1. **template_analyzer** — Reads target project config, templates, existing content
+2. **content_planner** — Creates a detailed lesson plan from analysis
+3. **code_generator** — Produces Python source matching the template
+4. **validator** — Runs ruff/mypy/pytest with up to 3 repair cycles
+
+State flows between agents via `output_key` → `{placeholder}` in instructions.
+`include_contents='none'` on agents 2-4 prevents conversation history bloat.
 
 ## Coding Standards
 

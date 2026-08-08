@@ -18,7 +18,7 @@ google-adk = { path = "../../../study/ai-agents/google-adk-python", editable = t
 dev = [
   "pytest",
   "pytest-asyncio",
-  "ruff>=0.16.0",
+  "ruff>=0.16.1",
   "mypy",
   "fastapi",
   "litestar",

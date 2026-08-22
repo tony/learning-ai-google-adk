@@ -48,8 +48,6 @@ stated twice, the file listed above is the one that governs.
 - Import standard-library modules by namespace (`import enum`, not
   `from enum import Enum`); `typing` is imported as `t`. Third-party imports
   may use `from X import Y`. Not enforced by ruff — a human convention.
-  Exception: `dataclasses` may use `from dataclasses import dataclass,
-  field` for cleaner decorator syntax.
 - `content_generator` stays free of an ADK import by design, so it is
   importable and testable without the `google-adk` package.
 

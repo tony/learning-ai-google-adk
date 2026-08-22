@@ -376,13 +376,16 @@ wrong. The goal is to maximise information density.
   unexplained emoji, no tool metadata.
 - **Brittle references.** No hard-coded line numbers, fragile file counts,
   dated "as of" claims, bare SHAs, or local absolute paths — unless they are
-  strict evidentiary artefacts, such as a benchmark log or a stack trace.
+  strict evidentiary artefacts, such as a benchmark log, release notes, a
+  stack trace, or a lockfile entry, which are exempt and preserved exactly.
 - **Diff narration.** Do not restate what moved, was renamed, or was removed
   in anything the reader holds alongside the diff: code, docstrings, README,
   or a pull request description.
 - **Branch-internal narrative.** Do not mention intermediate states,
-  abandoned approaches, or "no longer" behaviour unless a change actually
-  shipped in a release users experienced.
+  abandoned approaches, or "no longer" behaviour in a shipped artefact
+  unless users of a published release actually experienced the old state —
+  this project has never published a release, so treat every prior state as
+  branch-internal by default (**the published-release test**).
 - **Low-value scaffolding.** No ownerless TODOs, unused future-proofing,
   debug artefacts, or defensive wrappers around failure modes nothing can
   reach.

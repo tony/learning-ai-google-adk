@@ -33,6 +33,13 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["google_search_agent", "content_generator", "content_generator_agent"]
+# AGENTS.md (+ its CLAUDE.md symlink) is contributor guidance, not a package
+# resource; hatchling packages every file under a packaged directory, so it
+# would otherwise ship inside every install.
+exclude = [
+  "**/AGENTS.md",
+  "**/CLAUDE.md",
+]
 
 [tool.mypy]
 strict = true

@@ -278,7 +278,10 @@ def test_tool_declaration_excludes_tool_context(
     """FunctionDeclaration must not expose tool_context to the LLM."""
     tool = FunctionTool(func)
     decl = tool._get_declaration()
-    props = decl.parameters.properties if decl.parameters else {}
+    if decl.parameters_json_schema:
+        props = decl.parameters_json_schema.get("properties", {})
+    else:
+        props = decl.parameters.properties if decl.parameters else {}
     assert "tool_context" not in props
     # Guard against vacuous pass on empty declaration
     sig = inspect.signature(func)

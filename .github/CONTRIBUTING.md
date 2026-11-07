@@ -58,6 +58,10 @@ $ uv run pytest
 There is no continuous integration in this repository; `just check` runs
 format, test, lint, and type-check in that order and is the order of record.
 
+All four gates must pass before a change counts as complete. A failing
+test blocks completion, not review only — do not describe a change as
+done, or as working as expected, while any gate is red.
+
 This repository does not run documentation examples as tests — see
 [Documented examples that run](WRITING.md#documented-examples-that-run).
 
